@@ -1,31 +1,53 @@
-import TransactionsRepository from '../repositories/TransactionsRepository';
+import { getCustomRepository, getRepository } from 'typeorm';
+import AppError from '../errors/AppError';
+
 import Transaction from '../models/Transaction';
+import TransactionRepository from '../repositories/TransactionsRepository';
+import Category from '../models/Category';
 
 interface Request {
   title: string;
   value: number;
   type: 'income' | 'outcome';
+  category: string;
 }
 
 class CreateTransactionService {
-  private transactionsRepository: TransactionsRepository;
+  public async execute({
+    title,
+    value,
+    type,
+    category,
+  }: Request): Promise<Transaction> {
+    const transactionsRepository = getCustomRepository(TransactionRepository);
+    const categoriesRepository = getRepository(Category);
 
-  constructor(transactionsRepository: TransactionsRepository) {
-    this.transactionsRepository = transactionsRepository;
-  }
-
-  public execute({ title, value, type }: Request): Transaction {
     if (type === 'outcome') {
-      const balance = this.transactionsRepository.getBalance();
+      const balance = await transactionsRepository.getBalance();
       if (value + balance.outcome > balance.income)
-        throw Error('Invalid outcome value');
+        throw new AppError('Invalid outcome value');
     }
 
-    const transaction = this.transactionsRepository.create({
+    let categoryExists = await categoriesRepository.findOne({
+      where: { title: category },
+    });
+
+    if (!categoryExists) {
+      categoryExists = categoriesRepository.create({
+        title: category,
+      });
+
+      await categoriesRepository.save(categoryExists);
+    }
+
+    const transaction = transactionsRepository.create({
       title,
       value,
       type,
+      category: categoryExists,
     });
+
+    await transactionsRepository.save(transaction);
 
     return transaction;
   }
