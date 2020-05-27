@@ -222,11 +222,11 @@ describe('Transaction', () => {
           type: 'income',
         }),
         expect.objectContaining({
-          title: 'Website Hosting',
+          title: 'Ice cream',
           type: 'outcome',
         }),
         expect.objectContaining({
-          title: 'Ice cream',
+          title: 'Website Hosting',
           type: 'outcome',
         }),
       ]),
